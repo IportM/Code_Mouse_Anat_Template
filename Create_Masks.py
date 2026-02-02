@@ -22,48 +22,32 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
     - N4 bias correction (2 consecutive passes)
     - Probabilistic brain extraction (antspynet)
     - Adaptive thresholding (Otsu)
-    - Morphology: erosion + largest component + dilation (same radius) + FillHoles
-
-    Outputs:
-    - <base>_brain_extracted.nii.gz in `brain_out_dir`
-    - <base>_mask_final.nii.gz next to `derived_output_path` (same directory)
-    - Optional step-by-step QC outputs in <output_dir>/step/ when `save_steps=True`
+    - Morphology: erosion + largest component + dilation + FillHoles
     """
     base_name = _strip_nii_ext(os.path.basename(input_path))
 
     print(f"[INFO] Reading image: {input_path}")
     image = ants.image_read(input_path)
 
-    # Output directory used for derived files (mask + optional steps)
     output_dir = os.path.dirname(derived_output_path)
-
     step_dir = os.path.join(output_dir, "step")
     step_counter = 1
+    
     if save_steps:
         os.makedirs(step_dir, exist_ok=True)
-
-        # 0) Save raw input
         ants.image_write(image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_input.nii.gz"))
         step_counter += 1
 
     # 1) N4 bias correction (pass 1)
     print("[INFO] N4 bias field correction (pass 1)...")
-    image = ants.n4_bias_field_correction(
-        image,
-        shrink_factor=4,
-        convergence={"iters": [20, 20, 10], "tol": 1e-6},
-    )
+    image = ants.n4_bias_field_correction(image, shrink_factor=4, convergence={"iters": [20, 20, 10], "tol": 1e-6})
     if save_steps:
         ants.image_write(image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_n4_pass1.nii.gz"))
         step_counter += 1
 
     # 2) N4 bias correction (pass 2)
     print("[INFO] N4 bias field correction (pass 2)...")
-    image = ants.n4_bias_field_correction(
-        image,
-        shrink_factor=2,
-        convergence={"iters": [30, 20, 10], "tol": 1e-6},
-    )
+    image = ants.n4_bias_field_correction(image, shrink_factor=2, convergence={"iters": [30, 20, 10], "tol": 1e-6})
     if save_steps:
         ants.image_write(image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_n4_pass2.nii.gz"))
         step_counter += 1
@@ -96,7 +80,7 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
         ants.image_write(mask_component, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_largest_component.nii.gz"))
         step_counter += 1
 
-    # 7) Morphology: dilation (same radius as erosion)
+    # 7) Morphology: dilation
     print(f"[INFO] Morphology: dilation (radius={erosion_radius})...")
     mask_dilated = ants.iMath(mask_component, "MD", erosion_radius)
     if save_steps:
@@ -118,7 +102,6 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
     brain_out_path = os.path.join(brain_out_dir, f"{base_name}_brain_extracted.nii.gz")
     ants.image_write(brain_image, brain_out_path)
 
-    # Save final mask next to derived_output_path directory
     final_mask_path = os.path.join(output_dir, f"{base_name}_mask_final.nii.gz")
     ants.image_write(mask_filled, final_mask_path)
 
@@ -129,42 +112,32 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
 
 
 def _is_rare_file(filename: str) -> bool:
-    # Stricter than substring search: only accept *_RARE.nii or *_RARE.nii.gz
     return filename.endswith("_RARE.nii.gz") or filename.endswith("_RARE.nii")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Brain extraction for RARE: scan mode (--root) or single-file mode (--input)."
-    )
-
+    parser = argparse.ArgumentParser(description="Brain extraction for RARE.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-r", "--root", help="Scan recursively (original behavior)")
     group.add_argument("--input", help="Process a single RARE file")
 
     parser.add_argument("--bids-root", help="BIDS root (required with --input)")
-    parser.add_argument("--out-root", help="Output root (required with --input). Will create <out-root>/derivatives/ ...")
-    parser.add_argument("--save-steps", action="store_true", help="Write step-by-step QC outputs in a 'step/' folder.")
-
+    parser.add_argument("--out-root", help="Output root (required with --input)")
+    parser.add_argument("--save-steps", action="store_true", help="Write step-by-step QC outputs.")
+    
     args = parser.parse_args()
 
-    # -----------------------
-    # Scan mode
-    # -----------------------
+    # Default morphology parameter (Hardcoded logic removed)
+    DEFAULT_EROSION = 6
+
+    # --- Scan mode ---
     if args.root:
         root_dir = os.path.abspath(args.root)
-
         derivatives_dir = os.path.join(root_dir, "derivatives")
-        os.makedirs(derivatives_dir, exist_ok=True)
-
         brain_root = os.path.join(derivatives_dir, "Brain_extracted", "RARE")
         os.makedirs(brain_root, exist_ok=True)
 
-        # NOTE: dataset-specific (kept intentionally for now, as requested)
-        exclude_subjects = ["sub-07_ses-3"]
-
         for dirpath, dirnames, filenames in os.walk(root_dir):
-            # Do not scan inside derivatives
             dirnames[:] = [d for d in dirnames if d != "derivatives"]
 
             for filename in filenames:
@@ -172,53 +145,26 @@ def main():
                     continue
 
                 input_file = os.path.join(dirpath, filename)
-
-                # NOTE: dataset-specific (kept intentionally for now, as requested)
-                if any(excl in input_file for excl in exclude_subjects):
-                    print(f"[SKIP] Excluded by list: {input_file}")
-                    continue
-
                 rel_path = os.path.relpath(dirpath, root_dir)
                 output_dir = os.path.join(derivatives_dir, rel_path)
                 os.makedirs(output_dir, exist_ok=True)
 
                 base_name = _strip_nii_ext(filename)
                 mask_final_path = os.path.join(output_dir, f"{base_name}_mask_final.nii.gz")
+                
                 if os.path.exists(mask_final_path):
-                    print(f"[SKIP] Mask already exists for {base_name}, skipping.")
                     continue
 
                 derived_output_path = os.path.join(output_dir, f"{base_name}_brain_extracted.nii.gz")
-
-                parts = input_file.split(os.sep)
-                sub_id = next((p for p in parts if p.startswith("sub-")), None)
-                ses_id = next((p for p in parts if p.startswith("ses-")), None)
-
-                # NOTE: dataset-specific (kept intentionally for now, as requested)
-                erosion_radius = 6
-                if sub_id == "sub-04" and ses_id == "ses-4":
-                    erosion_radius = 4
-                elif sub_id == "sub-06" and ses_id == "ses-4":
-                    erosion_radius = 8
-
                 print(f"[INFO] Processing: {input_file}")
-                print(f"[INFO] Morphology params: erosion_radius={erosion_radius} (dilation uses the same radius)")
 
                 try:
-                    process_file(
-                        input_file,
-                        derived_output_path,
-                        brain_root,
-                        erosion_radius=erosion_radius,
-                        save_steps=args.save_steps,
-                    )
+                    process_file(input_file, derived_output_path, brain_root, erosion_radius=DEFAULT_EROSION, save_steps=args.save_steps)
                 except Exception as e:
                     print(f"[ERROR] Failed processing {input_file}: {e}")
         return
 
-    # -----------------------
-    # Single-file mode
-    # -----------------------
+    # --- Single-file mode ---
     if not args.bids_root or not args.out_root:
         raise SystemExit("ERROR: --bids-root and --out-root are required with --input")
 
@@ -230,47 +176,31 @@ def main():
         raise SystemExit(f"ERROR: input file not found: {input_file}")
 
     derivatives_dir = os.path.join(out_root, "derivatives")
-    os.makedirs(derivatives_dir, exist_ok=True)
-
     brain_root = os.path.join(derivatives_dir, "Brain_extracted", "RARE")
     os.makedirs(brain_root, exist_ok=True)
 
     dirpath = os.path.dirname(input_file)
-    rel_path = os.path.relpath(dirpath, bids_root)
+    # Handle cases where input might be outside BIDS root (robustness)
+    try:
+        rel_path = os.path.relpath(dirpath, bids_root)
+    except ValueError:
+        rel_path = os.path.basename(dirpath)
+
     output_dir = os.path.join(derivatives_dir, rel_path)
     os.makedirs(output_dir, exist_ok=True)
 
     filename = os.path.basename(input_file)
     base_name = _strip_nii_ext(filename)
-
+    
     mask_final_path = os.path.join(output_dir, f"{base_name}_mask_final.nii.gz")
     if os.path.exists(mask_final_path):
         print(f"[SKIP] Mask already exists for {base_name}, skipping.")
         return
 
     derived_output_path = os.path.join(output_dir, f"{base_name}_brain_extracted.nii.gz")
-
-    parts = input_file.split(os.sep)
-    sub_id = next((p for p in parts if p.startswith("sub-")), None)
-    ses_id = next((p for p in parts if p.startswith("ses-")), None)
-
-    # NOTE: dataset-specific (kept intentionally for now, as requested)
-    erosion_radius = 6
-    if sub_id == "sub-04" and ses_id == "ses-4":
-        erosion_radius = 4
-    elif sub_id == "sub-06" and ses_id == "ses-4":
-        erosion_radius = 8
-
     print(f"[INFO] Processing: {input_file}")
-    print(f"[INFO] Morphology params: erosion_radius={erosion_radius} (dilation uses the same radius)")
 
-    process_file(
-        input_file,
-        derived_output_path,
-        brain_root,
-        erosion_radius=erosion_radius,
-        save_steps=args.save_steps,
-    )
+    process_file(input_file, derived_output_path, brain_root, erosion_radius=DEFAULT_EROSION, save_steps=args.save_steps)
 
 
 if __name__ == "__main__":
