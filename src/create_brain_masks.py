@@ -1,13 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Brain Extraction Pipeline for RARE images.
+
+This script performs the following steps to extract the brain:
+1. N4 Bias Field Correction (2 passes)
+2. Probabilistic brain extraction using ANTsPyNet
+3. Adaptive thresholding (Otsu)
+4. Morphological operations (Erosion, Largest Component, Dilation, Fill Holes)
+5. Final masking
+"""
+
+import logging
 import os
 import argparse
 import ants
 import antspynet
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def _strip_nii_ext(filename: str) -> str:
+    """
+    Remove .nii or .nii.gz extension from a filename.
+
+    Parameters
+    ----------
+    filename : str
+        The filename to strip.
+
+    Returns
+    -------
+    str
+        The base filename without extension.
+    """
     if filename.endswith(".nii.gz"):
         return filename[:-7]
     if filename.endswith(".nii"):
@@ -18,15 +45,35 @@ def _strip_nii_ext(filename: str) -> str:
 def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
                  erosion_radius: int = 6, save_steps: bool = False) -> str:
     """
-    Brain extraction pipeline:
+    Execute the brain extraction pipeline on a single image.
+
+    Pipeline steps:
     - N4 bias correction (2 consecutive passes)
     - Probabilistic brain extraction (antspynet)
     - Adaptive thresholding (Otsu)
     - Morphology: erosion + largest component + dilation + FillHoles
+
+    Parameters
+    ----------
+    input_path : str
+        Path to the input raw image (NIfTI).
+    derived_output_path : str
+        Path where the final brain-extracted image should be saved (local/derivatives folder).
+    brain_out_dir : str
+        Directory where a copy of the brain-extracted image is stored (central repository).
+    erosion_radius : int, optional
+        Radius for morphological erosion and dilation. Default is 6.
+    save_steps : bool, optional
+        If True, intermediate images (QC steps) are saved to a 'step' subdirectory.
+
+    Returns
+    -------
+    str
+        The full path to the final binary mask created.
     """
     base_name = _strip_nii_ext(os.path.basename(input_path))
 
-    print(f"[INFO] Reading image: {input_path}")
+    logging.info(f"Reading image: {input_path}")
     image = ants.image_read(input_path)
 
     output_dir = os.path.dirname(derived_output_path)
@@ -39,63 +86,63 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
         step_counter += 1
 
     # 1) N4 bias correction (pass 1)
-    print("[INFO] N4 bias field correction (pass 1)...")
+    logging.info("N4 bias field correction (pass 1)...")
     image = ants.n4_bias_field_correction(image, shrink_factor=4, convergence={"iters": [20, 20, 10], "tol": 1e-6})
     if save_steps:
         ants.image_write(image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_n4_pass1.nii.gz"))
         step_counter += 1
 
     # 2) N4 bias correction (pass 2)
-    print("[INFO] N4 bias field correction (pass 2)...")
+    logging.info("N4 bias field correction (pass 2)...")
     image = ants.n4_bias_field_correction(image, shrink_factor=2, convergence={"iters": [30, 20, 10], "tol": 1e-6})
     if save_steps:
         ants.image_write(image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_n4_pass2.nii.gz"))
         step_counter += 1
 
     # 3) Brain extraction (probability map)
-    print("[INFO] Brain extraction (antspynet)...")
+    logging.info("Brain extraction (antspynet)...")
     proba_image = antspynet.mouse_brain_extraction(image)
     if save_steps:
         ants.image_write(proba_image, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_proba.nii.gz"))
         step_counter += 1
 
     # 4) Adaptive thresholding (Otsu)
-    print("[INFO] Adaptive thresholding (Otsu)...")
+    logging.info("Adaptive thresholding (Otsu)...")
     mask = ants.threshold_image(proba_image, "Otsu", 1, 0)
     if save_steps:
         ants.image_write(mask, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_otsu.nii.gz"))
         step_counter += 1
 
     # 5) Morphology: erosion
-    print(f"[INFO] Morphology: erosion (radius={erosion_radius})...")
+    logging.info(f"Morphology: erosion (radius={erosion_radius})...")
     mask_eroded = ants.iMath(mask, "ME", erosion_radius)
     if save_steps:
         ants.image_write(mask_eroded, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_eroded.nii.gz"))
         step_counter += 1
 
     # 6) Keep largest component
-    print("[INFO] Keeping largest connected component...")
+    logging.info("Keeping largest connected component...")
     mask_component = ants.iMath(mask_eroded, "GetLargestComponent", 10000)
     if save_steps:
         ants.image_write(mask_component, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_largest_component.nii.gz"))
         step_counter += 1
 
     # 7) Morphology: dilation
-    print(f"[INFO] Morphology: dilation (radius={erosion_radius})...")
+    logging.info(f"Morphology: dilation (radius={erosion_radius})...")
     mask_dilated = ants.iMath(mask_component, "MD", erosion_radius)
     if save_steps:
         ants.image_write(mask_dilated, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_dilated.nii.gz"))
         step_counter += 1
 
     # 8) Fill holes
-    print("[INFO] Filling holes...")
+    logging.info("Filling holes...")
     mask_filled = ants.iMath(mask_dilated, "FillHoles", 0.3)
     if save_steps:
         ants.image_write(mask_filled, os.path.join(step_dir, f"{base_name}_step{step_counter:02d}_fillholes.nii.gz"))
         step_counter += 1
 
     # 9) Apply final mask
-    print("[INFO] Applying final mask...")
+    logging.info("Applying final mask...")
     brain_image = ants.multiply_images(image, mask_filled)
 
     os.makedirs(brain_out_dir, exist_ok=True)
@@ -105,17 +152,34 @@ def process_file(input_path: str, derived_output_path: str, brain_out_dir: str,
     final_mask_path = os.path.join(output_dir, f"{base_name}_mask_final.nii.gz")
     ants.image_write(mask_filled, final_mask_path)
 
-    print(f"[OK] Brain extracted: {brain_out_path}")
-    print(f"[OK] Final mask saved: {final_mask_path}")
+    logging.info(f"Brain extracted: {brain_out_path}")
+    logging.info(f"Final mask saved: {final_mask_path}")
 
     return final_mask_path
 
 
 def _is_rare_file(filename: str) -> bool:
+    """
+    Check if a filename corresponds to a RARE acquisition.
+
+    Parameters
+    ----------
+    filename : str
+        The filename to check.
+
+    Returns
+    -------
+    bool
+        True if the file ends with _RARE.nii or _RARE.nii.gz, False otherwise.
+    """
     return filename.endswith("_RARE.nii.gz") or filename.endswith("_RARE.nii")
 
 
 def main():
+    """
+    Main entry point for brain extraction.
+    Supports recursive scanning of a BIDS root directory or processing a single file.
+    """
     parser = argparse.ArgumentParser(description="Brain extraction for RARE.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-r", "--root", help="Scan recursively (original behavior)")
@@ -156,12 +220,12 @@ def main():
                     continue
 
                 derived_output_path = os.path.join(output_dir, f"{base_name}_brain_extracted.nii.gz")
-                print(f"[INFO] Processing: {input_file}")
+                logging.info(f"Processing: {input_file}")
 
                 try:
                     process_file(input_file, derived_output_path, brain_root, erosion_radius=DEFAULT_EROSION, save_steps=args.save_steps)
                 except Exception as e:
-                    print(f"[ERROR] Failed processing {input_file}: {e}")
+                    logging.error(f"Failed processing {input_file}: {e}")
         return
 
     # --- Single-file mode ---
@@ -194,12 +258,12 @@ def main():
     
     mask_final_path = os.path.join(output_dir, f"{base_name}_mask_final.nii.gz")
     if os.path.exists(mask_final_path):
-        print(f"[SKIP] Mask already exists for {base_name}, skipping.")
+        logging.info(f"[SKIP] Mask already exists for {base_name}, skipping.")
         return
 
     derived_output_path = os.path.join(output_dir, f"{base_name}_brain_extracted.nii.gz")
-    print(f"[INFO] Processing: {input_file}")
-
+    logging.info(f"Processing: {input_file}")
+    
     process_file(input_file, derived_output_path, brain_root, erosion_radius=DEFAULT_EROSION, save_steps=args.save_steps)
 
 
