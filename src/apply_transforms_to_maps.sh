@@ -2,9 +2,32 @@
 set -euo pipefail
 shopt -s nullglob
 
-# ============================================================
-# Align.sh (Standardized & Recursive-Proof)
-# ============================================================
+# ==============================================================================
+# Script: apply_transforms_to_maps.sh
+# Description:
+#   Applies existing spatial transformations (computed on RARE images) to other
+#   parametric maps (e.g., T1map, T2map, T2starmap) to align them to the 
+#   Allen Atlas space.
+#
+#   It matches each map to its corresponding RARE transform based on Subject/Session ID.
+#
+# Usage:
+#   ./apply_transforms_to_maps.sh
+#
+# Parameters (Environment Variables):
+#   BRAIN_DIR       : Root directory to search recursively (usually derivatives/Brain_extracted).
+#                     Defaults to $PWD.
+#   TRANSFORM_DIR   : Directory containing the .mat/.nii.gz files from RARE registration.
+#                     Defaults to $BRAIN_DIR/RARE/transforms.
+#   ALLEN_TEMPLATE  : Path to the reference image (required).
+#   FORCE_RERUN     : Set to "1" to overwrite existing aligned files.
+#   INTERP          : Interpolation method (e.g., Linear, NearestNeighbor, BSpline[3]).
+#                     Defaults to BSpline[3].
+#
+# Outputs:
+#   - Creates an 'aligned/' subdirectory next to each input map containing
+#     the file resampled to the Allen space.
+# ==============================================================================
 
 log_info() { echo "[INFO] $*"; }
 log_ok()   { echo "[OK]   $*"; }

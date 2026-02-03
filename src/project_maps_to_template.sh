@@ -1,6 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 shopt -s nullglob
+# ==============================================================================
+# Script: project_maps_to_template.sh
+# Description:
+#   Warps individual parametric maps (e.g., T1map, UNIT1) into the Study-Specific 
+#   Template space. It uses the transforms generated during the template construction.
+#
+# Usage:
+#   ./project_maps_to_template.sh <modality>
+#
+# Arguments:
+#   1. modality : The name of the modality (folder name) to project (e.g., "T1map").
+#
+# Parameters (Environment Variables):
+#   BRAIN_EXTRACTED_DIR : Root inputs directory.
+#   TARGET_GROUP        : Name of the group template to target (default: "study").
+#   INPUT_MODE          : "allen", "aligned", or "raw".
+#                         - "allen"/"aligned": Uses data from aligned/ subdirectory.
+#                         - "raw": Uses data directly from modality root.
+#   INTERP              : Interpolation method (default: BSpline[3]).
+#
+# Outputs:
+#   - derivatives/Brain_extracted/<MODALITY>/To_Template/<GROUP>/
+#     Contains the maps warped into the group template space (*_in_template.nii.gz).
+# ==============================================================================
 
 log_info() { echo "[INFO] $*"; }
 log_warn() { echo "[WARN] $*"; }

@@ -2,10 +2,31 @@
 set -euo pipefail
 shopt -s nullglob
 
-# ============================================================
-# Rare_Template.sh (Cleaner Output Structure)
-# Output: derivatives/templates/<GROUP>/<CONTRAST>/
-# ============================================================
+# ==============================================================================
+# Script: build_study_template.sh
+# Description:
+#   Constructs a population-specific Multivariate Template using ANTs.
+#   It proceeds iteratively through increasing resolutions (e.g., 0.5mm -> 0.1mm)
+#   to ensure robust convergence.
+#
+# Usage:
+#   ./build_study_template.sh <contrast> [Group_Name] [Session_Filter]
+#
+# Arguments:
+#   1. contrast       : The modality to use (usually "RARE").
+#   2. Group_Name     : Name of the output group (default: "study").
+#   3. Session_Filter : Optional comma-separated list of sessions (e.g., "ses-1").
+#
+# Parameters (Environment Variables):
+#   BRAIN_EXTRACTED_DIR : Root inputs directory.
+#   TEMPLATE_THREADS    : Number of threads for template construction (default: 16).
+#   FORCE_RERUN         : Set to "1" to re-calculate existing templates.
+#   INPUT_MODE          : "auto", "raw", or "aligned". Defines source of images.
+#
+# Outputs:
+#   - derivatives/templates/<Group_Name>/<Contrast>/res-0.1mm/
+#     Contains the final template image.
+# ==============================================================================
 
 log_info() { echo "[INFO] $*"; }
 log_warn() { echo "[WARN] $*"; }

@@ -2,6 +2,31 @@
 set -euo pipefail
 shopt -s nullglob
 
+
+# ==============================================================================
+# Script: average_maps.sh
+# Description:
+#   Computes the voxel-wise average of registered maps (e.g., T1map) that have
+#   already been projected into the template space.
+#
+# Usage:
+#   ./average_maps.sh <modality>
+#
+# Arguments:
+#   1. modality : The name of the modality to average (e.g., "T1map").
+#
+# Parameters (Environment Variables):
+#   BRAIN_EXTRACTED_DIR : Root inputs directory.
+#   FORCE_RERUN         : Set to "1" to overwrite existing averages.
+#
+# Inputs:
+#   - Looks in: derivatives/Brain_extracted/<MODALITY>/To_Template/<GROUP>/
+#
+# Outputs:
+#   - derivatives/Brain_extracted/<MODALITY>/To_Template/<GROUP>/template/
+#     Contains the averaged file: <GROUP>_<MODALITY>_template.nii.gz
+# ==============================================================================
+
 log_info() { echo "[INFO] $*"; }
 log_warn() { echo "[WARN] $*"; }
 log_ok()   { echo "[OK]   $*"; }

@@ -2,13 +2,31 @@
 set -euo pipefail
 shopt -s nullglob
 
-# ============================================================
-# Rare_alignment.sh (Renamed & Standardized)
-# Purpose: Register RARE -> Allen
+# ==============================================================================
+# Script: register_RARE_to_atlas.sh
+# Description:
+#   Registers RARE anatomical images to the Allen Brain Atlas reference.
+#   This is the foundational step that generates the warp fields and affine
+#   matrices used to propagate other modalities (T1, T2*, etc.) to the atlas.
+#
+# Usage:
+#   ./register_RARE_to_atlas.sh
+#
+# Parameters (Environment Variables):
+#   BRAIN_EXTRACTED_DIR : Path to 'derivatives/Brain_extracted'.
+#                         Defaults to $PWD if not set.
+#   DATA_DIR            : Directory containing RARE images.
+#                         Defaults to $BRAIN_EXTRACTED_DIR/RARE.
+#   ALLEN_TEMPLATE      : Path to the fixed reference image (Allen Atlas).
+#                         Defaults to ./resources/100_AMBA_ref.nii.gz.
+#   TRANSFORM_TYPE      : Registration type passed to antsRegistrationSyN.sh.
+#                         's' = SyN (deformable), 'a' = Rigid+Affine. Defaults to 'a'.
+#   N_THREADS           : Number of CPU threads for ANTs. Defaults to 8.
+#
 # Outputs:
-#   - transforms/ : .mat and .nii.gz warps
-#   - aligned/    : Resampled images
-# ============================================================
+#   - <DATA_DIR>/transforms/ : Contains .mat (affine) and .nii.gz (warp) files.
+#   - <DATA_DIR>/aligned/    : Contains RARE images resampled to Allen space.
+# ==============================================================================
 
 log_info() { echo "[INFO] $*"; }
 log_warn() { echo "[WARN] $*"; }
