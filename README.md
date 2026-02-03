@@ -146,3 +146,23 @@ output_folder/
         └── anat/
             └── sub-01_(ses-1)_RARE_mask_final.nii.gz
 ```
+
+###  Statistical Metrics Output
+Description of the columns generated in the output statistics files (`*_roi_stats.tsv` or `*.csv`).
+
+| Metric | Type | Description |
+| :--- | :--- | :--- |
+| **Volume & Central Tendency** | | |
+| `n_voxels` | Count | Total number of voxels included in the Region of Interest (ROI). |
+| `mean` | Float | Arithmetic mean of signal intensity within the ROI. |
+| `median` | Float | Median value (50th percentile) of the distribution. |
+| **Dispersion & Extremes** | | |
+| `std` | Float | Standard deviation, measuring the spread of values around the mean. |
+| `iqr` | Float | Interquartile Range ($Q3 - Q1$), a robust measure of statistical dispersion. |
+| `min` | Float | Minimum intensity value observed in the ROI. |
+| `max` | Float | Maximum intensity value observed in the ROI. |
+| **Distribution Shape** | | |
+| `q1` / `q3` | Float | First (25%) and Third (75%) quartiles. |
+| `p05` / `p95` | Float | 5th and 95th percentiles (useful to exclude extreme outliers/noise). |
+| `pct_within_1sd` | Percent | Percentage of voxels falling within the [Mean $\pm$ 1 SD] range.  |
+| `pct_within_whiskers` | Percent | Percentage of voxels within Tukey's whiskers ($[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$). |
