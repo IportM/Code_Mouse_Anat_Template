@@ -1,6 +1,6 @@
 # FC3R Mouse Anat Pipeline
 
-[![Python version badge](https://img.shields.io/badge/python-3.8.10-blue)](https://www.python.org/)
+[![Python version badge](https://img.shields.io/badge/python-3.12.0-blue)](https://www.python.org/)
 [![Bash badge](https://img.shields.io/badge/shell-bash-black)](https://www.gnu.org/software/bash/)
 
 **FC3R Mouse Anat Pipeline** is the main library supporting anatomical MRI processing for the FC3R project.
