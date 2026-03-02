@@ -89,7 +89,6 @@ source venv/bin/activate
 ```bash
 ./run_anat_pipeline.sh /path/to/BIDS_ROOT/sub-01 \
     --out /path/to/output_folder \
-    --force-template-single
 ```
 ### Command Line Options
 

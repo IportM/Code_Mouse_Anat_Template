@@ -3,8 +3,7 @@ set -euo pipefail
 shopt -s nullglob
 
 # ============================================================
-# Mouse_Anat_Template.sh
-# Driver pipeline (CORRECTED: Early Session Filtering)
+# run_anat_pipeline.sh
 # ============================================================
 
 usage() {
@@ -74,9 +73,9 @@ rare_allen_outputs_ready() {
     case_id="$(case_id_from_base "$base" || true)"
     if [[ -z "$case_id" ]]; then continue; fi
 
-    # Check filter logic here too (implicit via file existence, but safe to keep)
+    # Bash 3.2 string-based inclusion check
     if [[ ${#requested_modalities[@]} -gt 0 && "$FILTER_BY_MODALITIES" == "1" ]]; then
-      if [[ -z "${SELECTED_CASES[$case_id]+x}" ]]; then continue; fi
+      if [[ "$SELECTED_CASES_STR" != *" $case_id "* ]]; then continue; fi
     fi
     n_checked=$((n_checked+1))
 
@@ -199,13 +198,15 @@ echo "SESSION_FILTER       : ${SESSION_FILTER:-<ALL>}"
 echo "FORCE_RERUN          : $FORCE_RERUN"
 echo_hr
 
-declare -A SELECTED_CASES=()
+# Replaced associative arrays with strings for Bash 3.2 compatibility
+SELECTED_CASES_STR=" "
+MODALITY_FOUND_STR=" "
+
 DO_TEMPLATE_STEPS=1
 if [[ "$N_SUBJECTS" -lt 2 && "$FORCE_TEMPLATE_SINGLE" != "1" ]]; then
   echo " Single-subject dataset. Template steps skipped."
   DO_TEMPLATE_STEPS=0
 fi
-declare -A modality_found=()
 
 # ============================================================
 # STEP 1-3: Masks & Extract
@@ -242,19 +243,15 @@ for sub_dir in "${subject_dirs[@]}"; do
       ses_canon="ses-1"
     fi
 
-    # === FIX: EARLY SESSION FILTERING ===
+    # === EARLY SESSION FILTERING ===
     if [[ ${#filter_sessions[@]} -gt 0 ]]; then
       match=0
       for s in "${filter_sessions[@]}"; do
-        # We compare ses_tag (e.g. "ses-1") with filter item
         if [[ "$ses_tag" == "$(echo "$s" | xargs)" ]]; then match=1; break; fi
-        # Fallback if no session in BIDS but user asked "ses-1" (assume match if ses_canon matches)
         if [[ "$ses_canon" == "$(echo "$s" | xargs)" ]]; then match=1; break; fi
       done
       
       if [[ "$match" -eq 0 ]]; then 
-        # Skip silently to avoid log spam, or uncomment below:
-        # echo "Skipping $sub $ses_tag (not in filter)"
         continue 
       fi
     fi
@@ -267,19 +264,28 @@ for sub_dir in "${subject_dirs[@]}"; do
     rare="$(find_first_existing "${anat_dir}/${prefix}"*RARE*.nii.gz "${anat_dir}/${prefix}"*RARE*.nii)" || rare=""
     if [[ -z "$rare" ]]; then continue; fi
 
-    declare -A SESSION_MOD_PATH=()
+    # Replaced dictionary with parallel standard arrays for Bash 3.2
+    session_mods=()
+    session_paths=()
     found_any=0; missing_any=0
+    
     if [[ ${#requested_modalities[@]} -gt 0 && "$FILTER_BY_MODALITIES" == "1" ]]; then
       for mod in "${requested_modalities[@]}"; do
         img="$(find_first_existing "${anat_dir}/${prefix}"*"${mod}"*.nii.gz "${anat_dir}/${prefix}"*"${mod}"*.nii)" || img=""
-        if [[ -n "$img" ]]; then SESSION_MOD_PATH["$mod"]="$img"; found_any=1; else missing_any=1; fi
+        if [[ -n "$img" ]]; then 
+          session_mods+=("$mod")
+          session_paths+=("$img")
+          found_any=1
+        else 
+          missing_any=1
+        fi
       done
       if [[ "$REQUIRE_ALL_MODALITIES" == "1" && "$missing_any" == "1" ]]; then continue; fi
       if [[ "$found_any" == "0" ]]; then continue; fi
     fi
 
     echo "[OK]   $case_id : $rare"
-    SELECTED_CASES["$case_id"]=1
+    SELECTED_CASES_STR+="${case_id} "
     rare_base="$(basename_nii "$rare")"
     mask_path="${OUT_ROOT}/derivatives/${out_rel_anat}/${rare_base}_mask_final.nii.gz"
     
@@ -291,7 +297,14 @@ for sub_dir in "${subject_dirs[@]}"; do
     if [[ ! -f "$mask_path" ]]; then continue; fi
 
     for mod in "${requested_modalities[@]}"; do
-      img="${SESSION_MOD_PATH[$mod]:-}"
+      img=""
+      for (( i=0; i<${#session_mods[@]}; i++ )); do
+        if [[ "${session_mods[$i]}" == "$mod" ]]; then
+          img="${session_paths[$i]}"
+          break
+        fi
+      done
+      
       [[ -z "$img" ]] && continue
       mkdir -p "${brain_extracted_root}/${mod}"
       img_base="$(basename_nii "$img")"
@@ -302,7 +315,10 @@ for sub_dir in "${subject_dirs[@]}"; do
       if [[ ! -f "$out_img" || "$FORCE_RERUN" == "1" ]]; then
         "$PYTHON_BIN" "$MASK_APPLY_SCRIPT" --mask "$mask_path" --acq "$img" --output "$out_img"
       fi
-      modality_found["$mod"]=1
+      
+      if [[ "$MODALITY_FOUND_STR" != *" $mod "* ]]; then
+        MODALITY_FOUND_STR+="${mod} "
+      fi
     done
   done
 done
@@ -328,7 +344,11 @@ echo_hr
 # ============================================================
 echo "=== Align optional modalities to Allen ==="
 mods_to_align=()
-for m in "${requested_modalities[@]}"; do [[ -n "${modality_found[$m]+x}" ]] && mods_to_align+=( "$m" ); done
+for m in "${requested_modalities[@]}"; do 
+  if [[ "$MODALITY_FOUND_STR" == *" $m "* ]]; then 
+    mods_to_align+=( "$m" )
+  fi
+done
 
 if [[ ${#mods_to_align[@]} -gt 0 ]]; then
   export BRAIN_DIR="${brain_extracted_root}"
