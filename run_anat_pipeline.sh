@@ -405,7 +405,15 @@ fi
 # ============================================================
 if [[ "$SKIP_ROI" == "1" ]]; then exit 0; fi
 
-if [[ "$FORCE_RERUN" != "1" ]]; then
+# On choisit la cible selon si le template a été créé ou sauté
+INPUT_TYPE="template"
+if [[ "$DO_TEMPLATE_STEPS" == "0" ]]; then
+  INPUT_TYPE="aligned"
+fi
+
+# On vérifie si les fichiers existent déjà (seulement en mode template, 
+# en single-subject on recalcule ou on laisse le Python écraser)
+if [[ "$FORCE_RERUN" != "1" && "$INPUT_TYPE" == "template" ]]; then
   if roi_tables_exist_for_group "$TEMPLATE_GROUP_NAME" "${mods_to_align[@]}"; then
     echo " ROI tables already exist. Done."
     exit 0
@@ -421,6 +429,7 @@ if [[ ${#mods_to_align[@]} -gt 0 && -f "$ROI_SCRIPT" ]]; then
     --labels-table "$ALLEN_LABELS_TABLE" \
     --modalities "$roi_modalities" \
     --per-roi-png \
-    --roi-ids all
+    --roi-ids all \
+    --input-type "$INPUT_TYPE"
 fi
 echo " Done."

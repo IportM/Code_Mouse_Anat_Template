@@ -86,6 +86,26 @@ def discover_templates(out_root: Path, modalities: List[str]) -> List[Tuple[str,
                     found.append((group, m, hits[0]))
     return found
 
+def discover_aligned(out_root: Path, modalities: List[str]) -> List[Tuple[str, str, Path]]:
+    """
+    OUT_ROOT/derivatives/Brain_extracted/<MOD>/aligned/*.nii.gz
+    Returns (subject_id, modality, aligned_path)
+    """
+    found: List[Tuple[str, str, Path]] = []
+    for m in modalities:
+        aligned_dir = out_root / "derivatives" / "Brain_extracted" / m / "aligned"
+        if not aligned_dir.is_dir():
+            continue
+        for img_path in sorted(aligned_dir.glob("*.nii*")):
+            # On extrait le nom du sujet pour s'en servir comme "groupe"
+            base_name = img_path.name.split(".nii")[0]
+            if "_aligned" in base_name:
+                base_name = base_name.split("_aligned")[0]
+            elif "_brain_extracted" in base_name:
+                base_name = base_name.split("_brain_extracted")[0]
+            
+            found.append((base_name, m, img_path))
+    return found
 
 def compute_stats_fast(
     label_data: np.ndarray,
@@ -369,7 +389,8 @@ def parse_args() -> argparse.Namespace:
         description="Extract Allen ROI stats from FC3R templates. TSV per Group*Modality + PNG per ROI."
     )
     p.add_argument("--out-root", type=str, required=True, help="OUT_ROOT produced by your driver.")
-    # MODIFICATION ICI : 'resources' au lieu de 'Ressources'
+    p.add_argument("--input-type", choices=["template", "aligned"], default="template",
+                   help="Look for group templates ('template') or individual aligned images ('aligned').")
     p.add_argument("--labels", type=str, default="", help="Default: ./resources/100_AMBA_LR.nii.gz next to this script.")
     p.add_argument("--labels-table", type=str, default="", help="Default: ./resources/allen_labels_table.csv next to this script.")
     p.add_argument("--modalities", type=str, default="T1map,UNIT1", help="Comma-separated modalities.")
@@ -414,10 +435,14 @@ def main() -> None:
         id_to_name = load_label_table(table_path)
 
     modalities = [m.strip() for m in args.modalities.split(",") if m.strip()]
-    template_list = discover_templates(out_root, modalities)
+
+    if args.input_type == "template":
+        template_list = discover_templates(out_root, modalities)
+    else:
+        template_list = discover_aligned(out_root, modalities)
+
     if not template_list:
-        # Comme on ne cherche que dans To_Template, si on n'a que RARE, c'est normal de ne rien trouver ici
-        print(f"[INFO] No templates found in To_Template for modalities: {modalities}. (Skipping stats if none found).")
+        print(f"[INFO] No '{args.input_type}' images found for modalities: {modalities}. (Skipping stats).")
         return
 
     outdir = Path(args.outdir).resolve() if args.outdir else (out_root / "derivatives" / "ROI_stats")
