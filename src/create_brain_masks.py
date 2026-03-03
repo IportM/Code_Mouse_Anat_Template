@@ -6,6 +6,15 @@ import argparse
 import ants
 import antspynet
 
+# --- KERAS MAC---
+import urllib.request
+_orig_urlretrieve = urllib.request.urlretrieve
+
+def _safe_urlretrieve(url, filename, reporthook=None, data=None):
+    return _orig_urlretrieve(url, filename, reporthook=None, data=data)
+
+urllib.request.urlretrieve = _safe_urlretrieve
+# ------------------------------------------------------------------------
 
 def _strip_nii_ext(filename: str) -> str:
     if filename.endswith(".nii.gz"):
