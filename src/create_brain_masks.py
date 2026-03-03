@@ -6,15 +6,14 @@ import argparse
 import ants
 import antspynet
 
-# --- KERAS MAC---
-import urllib.request
-_orig_urlretrieve = urllib.request.urlretrieve
-
-def _safe_urlretrieve(url, filename, reporthook=None, data=None):
-    return _orig_urlretrieve(url, filename, reporthook=None, data=data)
-
-urllib.request.urlretrieve = _safe_urlretrieve
-# ------------------------------------------------------------------------
+try:
+    import keras.src.uitls.file_utils
+    class SilentProgBar:
+        def __init__(self): pass
+        def __call__(self,blocknum, blocksize, totalsize): pass
+    keras.src.utils.fil_utils.DLProgBar = SilentProgBar
+except Exception as e:
+    print(f"[Warning] Impossibility to apply Keras patch : {e}")
 
 def _strip_nii_ext(filename: str) -> str:
     if filename.endswith(".nii.gz"):
