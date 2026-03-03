@@ -6,14 +6,23 @@ import argparse
 import ants
 import antspynet
 
+# --- FIX BUG KERAS MAC (Neutralise la barre de téléchargement Keras) ---
 try:
-    import keras.src.utils.file_utils
-    class SilentProgBar:
-        def __init__(self): pass
-        def __call__(self,blocknum, blocksize, totalsize): pass
-    keras.src.utils.fil_utils.DLProgBar = SilentProgBar
+    from keras.src.utils import file_utils
+    
+    class SilentProgbar:
+        def __init__(self): 
+            pass
+        def __call__(self, blocknum, blocksize, totalsize): 
+            pass
+        def update(self, current): 
+            pass
+            
+    file_utils.DLProgbar = SilentProgbar
+    print("[INFO] Patch Keras anti-crash appliqué avec succès.")
 except Exception as e:
-    print(f"[Warning] Impossibility to apply Keras patch : {e}")
+    print(f"[WARNING] Impossible d'appliquer le patch Keras : {e}")
+# -----------------------------------------------------------------------
 
 def _strip_nii_ext(filename: str) -> str:
     if filename.endswith(".nii.gz"):
