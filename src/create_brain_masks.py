@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-# os.environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] = "1"
-# os.environ["OMP_NUM_THREADS"] = "1"
-# os.environ["TF_NUM_INTEROP_THREADS"] = "1"
-# os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
-
 import ants         
 import antspynet
 import argparse
