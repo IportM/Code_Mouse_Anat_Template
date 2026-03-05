@@ -167,7 +167,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 # --- INITIALIAZE Ants IA MODELS ---
-rm -rf ~/.keras/datasets/* ~/.keras/models/* ~/.keras/ANTsXNet/*
+# rm -rf ~/.keras/datasets/* ~/.keras/models/* ~/.keras/ANTsXNet/*
 
 # On s'assure que les dossiers existent (Ajout de ANTsXNet)
 mkdir -p ~/.keras/datasets ~/.keras/models ~/.keras/ANTsXNet
@@ -175,6 +175,7 @@ mkdir -p ~/.keras/datasets ~/.keras/models ~/.keras/ANTsXNet
 # On force la copie depuis le dossier resources vers TOUS les dossiers requis
 cp ./resources/ants_IA/*.nii.gz ~/.keras/datasets/
 cp ./resources/ants_IA/*.nii.gz ~/.keras/ANTsXNet/
+cp ./resources/ants_IA/*.h5 ~/.keras/ANTsXNet/
 cp ./resources/ants_IA/*.h5 ~/.keras/models/
 
 # ON VÉRIFIE LE POIDS DANS LE CACHE :
