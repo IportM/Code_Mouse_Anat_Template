@@ -1,5 +1,5 @@
-antspynet==0.2.9
-antspyx==0.5.4
+antspynet
+antspyx
 matplotlib==3.7.5
 nibabel==5.2.1
 numpy==1.26.4

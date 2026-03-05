@@ -2,27 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-import argparse
-import ants
-import antspynet
+# os.environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] = "1"
+# os.environ["OMP_NUM_THREADS"] = "1"
+# os.environ["TF_NUM_INTEROP_THREADS"] = "1"
+# os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
 
-# --- FIX BUG KERAS MAC (Neutralise la barre de téléchargement Keras) ---
-try:
-    from keras.src.utils import file_utils
-    
-    class SilentProgbar:
-        def __init__(self): 
-            pass
-        def __call__(self, blocknum, blocksize, totalsize): 
-            pass
-        def update(self, current): 
-            pass
-            
-    file_utils.DLProgbar = SilentProgbar
-    print("[INFO] Patch Keras anti-crash appliqué avec succès.")
-except Exception as e:
-    print(f"[WARNING] Impossible d'appliquer le patch Keras : {e}")
-# -----------------------------------------------------------------------
+import ants         
+import antspynet
+import argparse
 
 def _strip_nii_ext(filename: str) -> str:
     if filename.endswith(".nii.gz"):

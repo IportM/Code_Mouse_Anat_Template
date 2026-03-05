@@ -166,6 +166,26 @@ mkdir -p "$OUT_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
+# --- INITIALIAZE Ants IA MODELS ---
+rm -rf ~/.keras/datasets/* ~/.keras/models/* ~/.keras/ANTsXNet/*
+
+# On s'assure que les dossiers existent (Ajout de ANTsXNet)
+mkdir -p ~/.keras/datasets ~/.keras/models ~/.keras/ANTsXNet
+
+# On force la copie depuis le dossier resources vers TOUS les dossiers requis
+cp ./resources/ants_IA/*.nii.gz ~/.keras/datasets/
+cp ./resources/ants_IA/*.nii.gz ~/.keras/ANTsXNet/
+cp ./resources/ants_IA/*.h5 ~/.keras/models/
+
+# ON VÉRIFIE LE POIDS DANS LE CACHE :
+echo "--- CONTENU DE ~/.keras/ANTsXNet/ ---"
+ls -lh ~/.keras/ANTsXNet/
+echo "--- CONTENU DE ~/.keras/datasets/ ---"
+ls -lh ~/.keras/datasets/
+echo "--- CONTENU DE ~/.keras/models/ ---"
+ls -lh ~/.keras/models/
+# -------------------------------------------------
+
 CREATE_MASK_SCRIPT="${CREATE_MASK_SCRIPT:-$SCRIPT_DIR/src/create_brain_masks.py}"
 MASK_APPLY_SCRIPT="${MASK_APPLY_SCRIPT:-$SCRIPT_DIR/src/apply_masks.py}"
 RARE_ALIGN_SCRIPT="${RARE_ALIGN_SCRIPT:-$SCRIPT_DIR/src/register_RARE_to_atlas.sh}"
