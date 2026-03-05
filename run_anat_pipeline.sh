@@ -166,25 +166,9 @@ mkdir -p "$OUT_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
-# --- INITIALIAZE Ants IA MODELS ---
-# rm -rf ~/.keras/datasets/* ~/.keras/models/* ~/.keras/ANTsXNet/*
-
-# On s'assure que les dossiers existent (Ajout de ANTsXNet)
-mkdir -p ~/.keras/datasets ~/.keras/models ~/.keras/ANTsXNet
-
-# On force la copie depuis le dossier resources vers TOUS les dossiers requis
-cp ./resources/ants_IA/*.nii.gz ~/.keras/datasets/
-cp ./resources/ants_IA/*.nii.gz ~/.keras/ANTsXNet/
-cp ./resources/ants_IA/*.h5 ~/.keras/ANTsXNet/
-cp ./resources/ants_IA/*.h5 ~/.keras/models/
-
-# ON VÉRIFIE LE POIDS DANS LE CACHE :
-echo "--- CONTENU DE ~/.keras/ANTsXNet/ ---"
-ls -lh ~/.keras/ANTsXNet/
-echo "--- CONTENU DE ~/.keras/datasets/ ---"
-ls -lh ~/.keras/datasets/
-echo "--- CONTENU DE ~/.keras/models/ ---"
-ls -lh ~/.keras/models/
+# --- INITIALIAZE Ants IA MODELS (offline) ---
+# Copy of models if you don't have internet acces, uncomment this :
+# cp ./resources/ants_IA/*.nii.gz ~/.keras/ANTsXNet/
 # -------------------------------------------------
 
 CREATE_MASK_SCRIPT="${CREATE_MASK_SCRIPT:-$SCRIPT_DIR/src/create_brain_masks.py}"

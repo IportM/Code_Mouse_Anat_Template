@@ -1,6 +1,6 @@
 # FC3R Mouse Anat Pipeline
 
-[![Python version badge](https://img.shields.io/badge/python-3.12.0-blue)](https://www.python.org/)
+[![Python version badge](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![Bash badge](https://img.shields.io/badge/shell-bash-black)](https://www.gnu.org/software/bash/)
 
 **FC3R Mouse Anat Pipeline** is the main library supporting anatomical MRI processing for the FC3R project.
@@ -24,7 +24,7 @@ Before running the pipeline, ensure the following dependencies are installed on 
 * **ANTs (Advanced Normalization Tools)**: The pipeline relies on `antsRegistrationSyN`, `antsApplyTransforms`, etc.
     * [Installation Guide](https://github.com/ANTsX/ANTs)
 * **Git**: To clone the repository.
-* **Python 3.8.10**: For the processing scripts.
+* **Python 3.11**: For the processing scripts.
 
 ##  Installation
 
@@ -40,7 +40,7 @@ cd Code_Mouse_Anat_Template
 #### 2. Set up the environment
 ```bash
 # Create a virtual environment (optional)
-python3 -m venv venv
+python3.11 -m venv venv
 
 # Activate it
 source venv/bin/activate
@@ -50,11 +50,7 @@ pip install --upgrade pip
 ```
 
 #### 3. Install Python dependencies
-Install the required scientific libraries (AntsPyNet, Nibabel, Pandas, etc.):
-```bash
-pip install antspynet nibabel pandas numpy argparse matplotlib scipy
-```
-or you can install via the requirements.txt
+Do not install packages manually. You must use the provided requirements.txt file to ensure the exact matching versions
 ```bash
 pip install -r requirements.txt
 ```
