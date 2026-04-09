@@ -38,7 +38,7 @@ cd Code_Mouse_Anat_Template
 ```
 
 #### 2. Set up the environment
-Create a virtual environment (optional). We suggest using [uv](https://docs.astral.sh/uv/getting-started/installation/) for faster installs and specifics versions.
+Create a virtual environment (optional).You MUST use [uv](https://docs.astral.sh/uv/getting-started/installation/) for faster installs and specifics versions and to avoid conflicts with your previous environments.
 ```bash
 uv venv --python 3.11 venv
 
