@@ -46,13 +46,13 @@ uv venv --python 3.11 venv
 source venv/bin/activate
 
 # Upgrade pip
-pip install --upgrade pip
+uv pip install --upgrade pip
 ```
 
 #### 3. Install Python dependencies
 Do not install packages manually. You must use the provided requirements.txt file to ensure the exact matching versions
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 #### 4. Permissions
 Ensure the scripts are executable (especially after cloning):
