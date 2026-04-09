@@ -58,8 +58,8 @@ pip install -r requirements.txt
 Ensure the scripts are executable (especially after cloning):
 ```bash
 chmod +x run_anat_pipeline.sh
-chmod +x scripts/*.sh
-chmod +x scripts/*.py
+chmod +x src/*.sh
+chmod +x src/*.py
 ```
 # Usage
 
