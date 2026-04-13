@@ -49,14 +49,16 @@ def label_name_from_id(
 
     if lr_offset > 0 and roi_id >= lr_offset:
         base_id = roi_id - lr_offset
-        side = "L"
-        base_name = id_to_name.get(base_id, f"ID_{base_id}")
-        full = f"{base_name}{left_suffix}"
-    else:
-        base_id = roi_id
         side = "R"
         base_name = id_to_name.get(base_id, f"ID_{base_id}")
         full = f"{base_name}{right_suffix}"
+        
+    else:
+        base_id = roi_id
+        side = "L"
+        base_name = id_to_name.get(base_id, f"ID_{base_id}")
+        full = f"{base_name}{left_suffix}"
+        
     return base_id, side, full
 
 
@@ -459,16 +461,22 @@ def main() -> None:
     for group, modality, tpl_path in template_list:
         tpl_img = nib.load(str(tpl_path))
         if tpl_img.shape != lab_img.shape:
-            # Simple warning instead of crash if mismatch? or strict? Keeping strict for consistency.
             raise ValueError(f"Shape mismatch labels {lab_img.shape} vs template {tpl_img.shape}: {tpl_path}")
 
         tpl_data = np.asanyarray(tpl_img.get_fdata(dtype=np.float32))
+        
+        zooms = tpl_img.header.get_zooms()
+        voxel_vol_mm3 = float(np.prod(zooms[:3]))
 
         stats_map = compute_stats_fast(
             label_data=lab_data,
             value_data=tpl_data,
             include_negative=args.include_negative,
             compute_minmax=not args.no_minmax,
+        )
+
+        total_brain_voxels = sum(
+            s.get("n_voxels", 0) for rid, s in stats_map.items() if rid != 0
         )
 
         rows: List[Dict[str, object]] = []
@@ -481,15 +489,22 @@ def main() -> None:
                 left_suffix=args.left_suffix,
             )
             s = stats_map.get(roi_id, {})
+            
+            n_voxels = int(s.get("n_voxels", 0))
+            vol_mm3 = n_voxels * voxel_vol_mm3
+            vol_pct = (n_voxels / total_brain_voxels * 100.0) if total_brain_voxels > 0 else 0.0
+
             rows.append({
                 "Group": group,
                 "Modality": modality,
-                "TemplateFile": tpl_path.name,  # reduced
+                "TemplateFile": tpl_path.name,
                 "ROI_id": int(roi_id),
                 "ROI_base_id": int(base_id),
                 "Hemisphere": hemi,
                 "ROI_name": roi_name,
-                "n_voxels": int(s.get("n_voxels", 0)),
+                "n_voxels": n_voxels,
+                "volume_mm3": vol_mm3,          
+                "volume_global_pct": vol_pct,   
                 "mean": float(s.get("mean", np.nan)) if s else np.nan,
                 "std": float(s.get("std", np.nan)) if s else np.nan,
                 "min": float(s.get("min", np.nan)) if (s and not args.no_minmax) else np.nan,

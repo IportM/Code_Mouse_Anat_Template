@@ -2,6 +2,8 @@
 set -euo pipefail
 shopt -s nullglob
 
+global_start = time()
+
 # ============================================================
 # run_anat_pipeline.sh
 # ============================================================
@@ -18,6 +20,8 @@ Usage:
                  [--no-allen-ref]
                  [--rare-transform a|s]
                  [--skip-roi]
+                 [--generate-pngs]
+                 [--roi-ids "all" | "214,2214"]
                  [--force]
                  [--keep-all-rare]
                  [--require-all-modalities]
@@ -112,6 +116,8 @@ FORCE_TEMPLATE_SINGLE=0
 USE_ALLEN_REF=1
 RARE_TRANSFORM_TYPE="a"
 SKIP_ROI=0
+GENERATE_PNGS=0
+ROI_IDS="all"
 FORCE_RERUN=0
 MODALITIES_LIST="T1map,UNIT1"
 FILTER_BY_MODALITIES=1
@@ -130,6 +136,8 @@ while [[ $# -gt 0 ]]; do
     --no-allen-ref) USE_ALLEN_REF=0; shift ;;
     --rare-transform) RARE_TRANSFORM_TYPE="${2:-s}"; shift 2 ;;
     --skip-roi) SKIP_ROI=1; shift ;;
+    --generate-pngs) GENERATE_PNGS=1; shift ;;
+    --roi-ids) ROI_IDS="${2:-all}"; shift 2 ;;
     --force) FORCE_RERUN=1; shift ;;
     --keep-all-rare) FILTER_BY_MODALITIES=0; shift ;;
     --require-all-modalities) REQUIRE_ALL_MODALITIES=1; shift ;;
@@ -428,13 +436,24 @@ fi
 if [[ ${#mods_to_align[@]} -gt 0 && -f "$ROI_SCRIPT" ]]; then
   echo "=== Extract ROI stats ==="
   roi_modalities="$(IFS=','; echo "${mods_to_align[*]}")"
-  "$PYTHON_BIN" "$ROI_SCRIPT" \
-    --out-root "$OUT_ROOT" \
-    --labels "$ALLEN_LABELS" \
-    --labels-table "$ALLEN_LABELS_TABLE" \
-    --modalities "$roi_modalities" \
-    --per-roi-png \
-    --roi-ids all \
+  
+  # On prépare le tableau des arguments de base
+  ROI_ARGS=(
+    --out-root "$OUT_ROOT"
+    --labels "$ALLEN_LABELS"
+    --labels-table "$ALLEN_LABELS_TABLE"
+    --modalities "$roi_modalities"
     --input-type "$INPUT_TYPE"
+  )
+
+  # Si l'utilisateur a demandé les PNGs, on ajoute les arguments nécessaires
+  if [[ "$GENERATE_PNGS" == "1" ]]; then
+    ROI_ARGS+=( --per-roi-png --roi-ids "$ROI_IDS" )
+  fi
+
+  # Exécution du script Python
+  "$PYTHON_BIN" "$ROI_SCRIPT" "${ROI_ARGS[@]}"
 fi
+
+echo "Total reconstruction time: $(time() - global_start) seconds"
 echo " Done."
