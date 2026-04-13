@@ -38,7 +38,7 @@ cd Code_Mouse_Anat_Template
 ```
 
 #### 2. Set up the environment
-Create a virtual environment (optional). We suggest using [uv](https://docs.astral.sh/uv/getting-started/installation/) for faster installs and specifics versions.
+Create a virtual environment (optional).You MUST use [uv](https://docs.astral.sh/uv/getting-started/installation/) for faster installs and specifics versions and to avoid conflicts with your previous environments.
 ```bash
 uv venv --python 3.11 venv
 
@@ -46,13 +46,13 @@ uv venv --python 3.11 venv
 source venv/bin/activate
 
 # Upgrade pip
-pip install --upgrade pip
+uv pip install --upgrade pip
 ```
 
 #### 3. Install Python dependencies
 Do not install packages manually. You must use the provided requirements.txt file to ensure the exact matching versions
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 #### 4. Permissions
 Ensure the scripts are executable (especially after cloning):
