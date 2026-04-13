@@ -2,7 +2,7 @@
 set -euo pipefail
 shopt -s nullglob
 
-global_start = time()
+SECONDS=0
 
 # ============================================================
 # run_anat_pipeline.sh
@@ -455,5 +455,10 @@ if [[ ${#mods_to_align[@]} -gt 0 && -f "$ROI_SCRIPT" ]]; then
   "$PYTHON_BIN" "$ROI_SCRIPT" "${ROI_ARGS[@]}"
 fi
 
-echo "Total reconstruction time: $(time() - global_start) seconds"
+duration=$SECONDS
+minutes=$((duration / 60))
+seconds=$((duration % 60))
+
+echo "--------------------------------------------"
+echo " Total pipeline execution time : ${minutes}m ${seconds}s"
 echo " Done."
