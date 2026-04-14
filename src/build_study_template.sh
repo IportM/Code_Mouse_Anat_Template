@@ -113,7 +113,7 @@ for res in "${resolutions[@]}"; do
   fov_x=$(echo "${dims[0]} * ${spacing[0]}" | bc -l)
   fov_y=$(echo "${dims[1]} * ${spacing[1]}" | bc -l)
   fov_z=$(echo "${dims[2]} * ${spacing[2]}" | bc -l)
-  FOV_MAX=$(printf "%.2f\n" $(echo "$fov_x $fov_y $fov_z" | tr ' ' '\n' | sort -nr | head -n1))
+  FOV_MAX=$(echo "$fov_x $fov_y $fov_z" | tr ' ' '\n' | sort -nr | head -n1 | awk '{printf "%.2f\n", $1}')
 
   GEN_PARAMS=$(python3 "$ANTS_GEN_ITER" --min "$res" --max "$FOV_MAX" --step-size 1 --output modelbuild | tr -d '\\')
   readarray -t PARAM_ARRAY <<< "$GEN_PARAMS"
