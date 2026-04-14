@@ -116,7 +116,7 @@ for res in "${resolutions[@]}"; do
   FOV_MAX=$(echo "$fov_x $fov_y $fov_z" | tr ' ' '\n' | sort -nr | head -n1 | LC_ALL=C awk '{printf "%.2f\n", $1}')
 
   GEN_PARAMS=$(python3 "$ANTS_GEN_ITER" --min "$res" --max "$FOV_MAX" --step-size 1 --output modelbuild | tr -d '\\')
-  readarray -t PARAM_ARRAY <<< "$GEN_PARAMS"
+  IFS=$'\n' read -d '' -r -a PARAM_ARRAY <<< "$GEN_PARAMS" || true
   
   cd "$WORK_DIR"
   cmd=(
