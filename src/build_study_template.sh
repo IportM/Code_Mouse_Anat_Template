@@ -110,10 +110,10 @@ for res in "${resolutions[@]}"; do
   test_img="${inputs[0]}"
   dims=($(mrinfo -size "$test_img"))
   spacing=($(mrinfo -spacing "$test_img"))
-  fov_x=$(echo "${dims[0]} * ${spacing[0]}" | bc -l)
-  fov_y=$(echo "${dims[1]} * ${spacing[1]}" | bc -l)
-  fov_z=$(echo "${dims[2]} * ${spacing[2]}" | bc -l)
-  FOV_MAX=$(echo "$fov_x $fov_y $fov_z" | tr ' ' '\n' | sort -nr | head -n1 | awk '{printf "%.2f\n", $1}')
+  fov_x=$(echo "${dims[0]} * ${spacing[0]}" | bc -l | tr ',' '.')
+  fov_y=$(echo "${dims[1]} * ${spacing[1]}" | bc -l | tr ',' '.')
+  fov_z=$(echo "${dims[2]} * ${spacing[2]}" | bc -l | tr ',' '.')
+  FOV_MAX=$(echo "$fov_x $fov_y $fov_z" | tr ' ' '\n' | sort -nr | head -n1 | LC_ALL=C awk '{printf "%.2f\n", $1}')
 
   GEN_PARAMS=$(python3 "$ANTS_GEN_ITER" --min "$res" --max "$FOV_MAX" --step-size 1 --output modelbuild | tr -d '\\')
   readarray -t PARAM_ARRAY <<< "$GEN_PARAMS"
